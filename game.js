@@ -1,6 +1,25 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
+function loadSprite(src) {
+  const image = new Image();
+  image.src = src;
+  return image;
+}
+
+const sprites = {
+  socrates: loadSprite("socrates-theme/socrates.svg"),
+  column: loadSprite("socrates-theme/greek-column.svg"),
+  vase: loadSprite("socrates-theme/vase.svg"),
+  scroll: loadSprite("socrates-theme/law.svg"),
+};
+
+const obstacleTypes = {
+  column: { sprite: "column", width: 40, height: 88 },
+  vase: { sprite: "vase", width: 34, height: 56 },
+  scroll: { sprite: "scroll", width: 46, height: 46 },
+};
+
 const player = {
   x: 90,
   y: 0,
@@ -78,14 +97,20 @@ function duck(isDucking) {
 }
 
 function spawnObstacle() {
-  const type = Math.floor(Math.random() * 3);
-  if (type === 0) {
-    obstacles.push({ x: canvas.width + 20, y: groundY - 58, width: 34, height: 58 });
-  } else if (type === 1) {
-    obstacles.push({ x: canvas.width + 20, y: groundY - 38, width: 66, height: 38 });
+  // Half the time a column, otherwise a vase or scroll chosen at random.
+  let def;
+  if (Math.random() < 0.5) {
+    def = obstacleTypes.column;
   } else {
-    obstacles.push({ x: canvas.width + 20, y: groundY - 132, width: 72, height: 30 });
+    def = Math.random() < 0.5 ? obstacleTypes.vase : obstacleTypes.scroll;
   }
+  obstacles.push({
+    x: canvas.width + 20,
+    y: groundY - def.height,
+    width: def.width,
+    height: def.height,
+    sprite: def.sprite,
+  });
   spawnTimer = 0.75 + Math.random() * 0.75;
 }
 
@@ -162,13 +187,11 @@ function draw() {
   ctx.fillStyle = "#111111";
   ctx.fillRect(0, groundY, canvas.width, 4);
 
-  ctx.fillStyle = "#000000";
   const playerBox = getPlayerBox();
-  ctx.fillRect(playerBox.x, playerBox.y, playerBox.width, playerBox.height);
+  drawSprite(sprites.socrates, playerBox, "#000000");
 
-  ctx.fillStyle = "#444444";
   for (const obstacle of obstacles) {
-    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+    drawSprite(sprites[obstacle.sprite], obstacle, "#444444");
   }
 
   drawLayer(foreground, "#777777");
@@ -182,6 +205,15 @@ function draw() {
 function drawLayer(layer, color) {
   ctx.fillStyle = color;
   for (const box of layer) {
+    ctx.fillRect(box.x, box.y, box.width, box.height);
+  }
+}
+
+function drawSprite(image, box, fallbackColor) {
+  if (image && image.complete && image.naturalWidth) {
+    ctx.drawImage(image, box.x, box.y, box.width, box.height);
+  } else {
+    ctx.fillStyle = fallbackColor;
     ctx.fillRect(box.x, box.y, box.width, box.height);
   }
 }
