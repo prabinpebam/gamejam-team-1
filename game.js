@@ -6,40 +6,67 @@ const player = {
   y: 0,
   width: 44,
   height: 70,
-  duckHeight: 38,
   velocityY: 0,
   grounded: true,
-  ducking: false,
 };
 
 const obstacles = [];
 const backgroundFar = [];
 const backgroundNear = [];
 const foreground = [];
-const parallax3Images = [
-  loadImage("assets/test-1/parallax-3/01-parallax-3-asset.png"),
-  loadImage("assets/test-1/parallax-3/02-parallax-3-asset.png"),
+
+const worlds = [
+  {
+    background: "assets/world-1/background.png",
+    character: "assets/world-1/character/character.png",
+    obstacles: [
+      "assets/world-1/obstacles/image 12.png",
+      "assets/world-1/obstacles/image 13.png",
+    ],
+    parallax1: [
+      "assets/world-1/parallax-1/image 6.png",
+      "assets/world-1/parallax-1/image 8.png",
+      "assets/world-1/parallax-1/image 9.png",
+      "assets/world-1/parallax-1/image 10.png",
+    ],
+    parallax2: [
+      "assets/world-1/parallax-2/image 6.png",
+      "assets/world-1/parallax-2/image 8.png",
+      "assets/world-1/parallax-2/image 9.png",
+      "assets/world-1/parallax-2/image 10.png",
+    ],
+    parallax3: [
+      "assets/world-1/parallax-3/01-parallax-3-asset.png",
+      "assets/world-1/parallax-3/02-parallax-3-asset.png",
+    ],
+  },
+  {
+    background: "assets/world-2/background.png",
+    character: "assets/world-2/character/character.png",
+    obstacles: [
+      "assets/world-2/obstacles/image 12.png",
+      "assets/world-2/obstacles/image 13.png",
+    ],
+    parallax1: [
+      "assets/world-2/parallax-1/WastelandMidground001.png",
+    ],
+    parallax2: [
+      "assets/world-2/parallax-2/Wasteland_Background001 1.png",
+    ],
+    parallax3: [
+      "assets/world-2/parallax-3/01-parallax-3-asset.png",
+      "assets/world-2/parallax-3/02-parallax-3-asset.png",
+    ],
+  },
 ];
-const parallax2Images = [
-  loadImage("assets/test-1/parallax-2/image 6.png"),
-  loadImage("assets/test-1/parallax-2/image 8.png"),
-  loadImage("assets/test-1/parallax-2/image 9.png"),
-  loadImage("assets/test-1/parallax-2/image 10.png"),
-];
-const parallax1Images = [
-  loadImage("assets/test-1/parallax-1/image 6.png"),
-  loadImage("assets/test-1/parallax-1/image 8.png"),
-  loadImage("assets/test-1/parallax-1/image 9.png"),
-  loadImage("assets/test-1/parallax-1/image 10.png"),
-];
-const obstacleImages = [
-  loadImage("assets/test-1/obstacles/image 12.png"),
-  loadImage("assets/test-1/obstacles/image 13.png"),
-];
-const characterImage = loadImage("assets/test-1/character/character.png");
-const backgroundImage = new Image();
-backgroundImage.src = "assets/test-1/background.png";
-backgroundImage.addEventListener("load", draw);
+
+let currentWorldIndex = 0;
+let parallax3Images = [];
+let parallax2Images = [];
+let parallax1Images = [];
+let obstacleImages = [];
+let characterImage = null;
+let backgroundImage = null;
 
 let groundY = 0;
 let speed = 360;
@@ -56,8 +83,7 @@ function resize() {
   player.x = canvas.width * 0.09;
   player.height = canvas.height * 0.2;
   player.width = player.height * 0.55;
-  player.duckHeight = player.height * 0.55;
-  player.y = groundY - getPlayerHeight();
+  player.y = groundY - player.height;
   fillParallax3();
   fillParallax2();
   fillForeground();
@@ -68,6 +94,27 @@ function loadImage(src) {
   image.src = src;
   image.addEventListener("load", draw);
   return image;
+}
+
+function loadWorld(index) {
+  currentWorldIndex = index;
+  const world = worlds[currentWorldIndex];
+  parallax3Images = world.parallax3.map(loadImage);
+  parallax2Images = world.parallax2.map(loadImage);
+  parallax1Images = world.parallax1.map(loadImage);
+  obstacleImages = world.obstacles.map(loadImage);
+  characterImage = loadImage(world.character);
+  backgroundImage = loadImage(world.background);
+  if (canvas.width && canvas.height) {
+    fillParallax3();
+    fillParallax2();
+    fillForeground();
+  }
+  draw();
+}
+
+function switchWorld() {
+  loadWorld((currentWorldIndex + 1) % worlds.length);
 }
 
 function fillLayer(layer, count, bottomY, speedRatio) {
@@ -155,7 +202,6 @@ function reset() {
   player.y = groundY - player.height;
   player.velocityY = 0;
   player.grounded = true;
-  player.ducking = false;
   speed = getBaseSpeed();
   score = 0;
   spawnTimer = 0.8;
@@ -170,17 +216,10 @@ function jump() {
   if (paused || !player.grounded) return;
   player.velocityY = -canvas.height * 1.6;
   player.grounded = false;
-  player.ducking = false;
-}
-
-function duck(isDucking) {
-  if (!player.grounded || gameOver) return;
-  player.ducking = isDucking;
-  player.y = groundY - getPlayerHeight();
 }
 
 function spawnObstacle() {
-  const type = Math.floor(Math.random() * 3);
+  const type = Math.floor(Math.random() * 2);
   if (type === 0) {
     const height = player.height * 0.45;
     obstacles.push({
@@ -198,14 +237,6 @@ function spawnObstacle() {
       width: player.width * 1.25,
       height,
       imageIndex: 1,
-    });
-  } else {
-    const height = player.height * 0.22;
-    obstacles.push({
-      x: canvas.width + canvas.width * 0.02,
-      y: groundY - player.height * 0.78,
-      width: player.width * 1.25,
-      height,
     });
   }
   spawnTimer = 0.75 + Math.random() * 0.75;
@@ -226,7 +257,7 @@ function update(dt) {
   player.y += player.velocityY * dt;
   const standingY = groundY - player.height;
   if (player.y >= standingY) {
-    player.y = groundY - getPlayerHeight();
+    player.y = standingY;
     player.velocityY = 0;
     player.grounded = true;
   }
@@ -265,16 +296,12 @@ function moveLayer(layer, dt) {
   }
 }
 
-function getPlayerHeight() {
-  return player.ducking ? player.duckHeight : player.height;
-}
-
 function getPlayerBox() {
   return {
     x: player.x,
     y: player.y,
-    width: player.ducking ? player.width + 28 : player.width,
-    height: getPlayerHeight(),
+    width: player.width,
+    height: player.height,
   };
 }
 
@@ -310,7 +337,7 @@ function draw() {
 function drawBackgroundImage() {
   ctx.fillStyle = "white";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  if (!backgroundImage.complete || backgroundImage.naturalWidth === 0) return;
+  if (!backgroundImage || !backgroundImage.complete || backgroundImage.naturalWidth === 0) return;
 
   const imageRatio = backgroundImage.naturalWidth / backgroundImage.naturalHeight;
   const canvasRatio = canvas.width / canvas.height;
@@ -335,7 +362,7 @@ function drawLayer(layer, color) {
 
 function drawCharacter() {
   const playerBox = getPlayerBox();
-  if (!characterImage.complete || characterImage.naturalWidth === 0) {
+  if (!characterImage || !characterImage.complete || characterImage.naturalWidth === 0) {
     ctx.fillStyle = "#000000";
     ctx.fillRect(playerBox.x, playerBox.y, playerBox.width, playerBox.height);
     return;
@@ -359,7 +386,7 @@ function drawObstacles() {
 function drawParallax3() {
   for (const box of backgroundFar) {
     const image = parallax3Images[box.imageIndex];
-    if (!image.complete || image.naturalWidth === 0) continue;
+    if (!image || !image.complete || image.naturalWidth === 0) continue;
     const height = box.width * (image.naturalHeight / image.naturalWidth);
     box.y = box.bottomY - height;
     ctx.drawImage(image, box.x, box.y, box.width, height);
@@ -369,7 +396,7 @@ function drawParallax3() {
 function drawParallax2() {
   for (const box of backgroundNear) {
     const image = parallax2Images[box.imageIndex];
-    if (!image.complete || image.naturalWidth === 0) continue;
+    if (!image || !image.complete || image.naturalWidth === 0) continue;
     const height = box.width * (image.naturalHeight / image.naturalWidth);
     box.y = box.bottomY - height;
     ctx.drawImage(image, box.x, box.y, box.width, height);
@@ -379,7 +406,7 @@ function drawParallax2() {
 function drawParallax1() {
   for (const box of foreground) {
     const image = parallax1Images[box.imageIndex];
-    if (!image.complete || image.naturalWidth === 0) continue;
+    if (!image || !image.complete || image.naturalWidth === 0) continue;
     const height = box.width * (image.naturalHeight / image.naturalWidth);
     box.y = box.bottomY - height;
     ctx.drawImage(image, box.x, box.y, box.width, height);
@@ -397,18 +424,15 @@ function loop(now) {
 window.addEventListener("resize", resize);
 window.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
-  if ([" ", "arrowup", "arrowdown"].includes(key)) event.preventDefault();
+  if ([" ", "arrowup"].includes(key)) event.preventDefault();
   if ([" ", "arrowup", "w"].includes(key)) jump();
-  if (["arrowdown", "s"].includes(key)) duck(true);
   if (key === "p") paused = !paused;
   if (key === "r") reset();
-});
-window.addEventListener("keyup", (event) => {
-  const key = event.key.toLowerCase();
-  if (["arrowdown", "s"].includes(key)) duck(false);
+  if (key === "t") switchWorld();
 });
 canvas.addEventListener("pointerdown", jump);
 
+loadWorld(0);
 resize();
 reset();
 requestAnimationFrame(loop);
