@@ -20,6 +20,22 @@ const parallax3Images = [
   loadImage("assets/test-1/parallax-3/01-parallax-3-asset.png"),
   loadImage("assets/test-1/parallax-3/02-parallax-3-asset.png"),
 ];
+const parallax2Images = [
+  loadImage("assets/test-1/parallax-2/image 6.png"),
+  loadImage("assets/test-1/parallax-2/image 8.png"),
+  loadImage("assets/test-1/parallax-2/image 9.png"),
+  loadImage("assets/test-1/parallax-2/image 10.png"),
+];
+const parallax1Images = [
+  loadImage("assets/test-1/parallax-1/image 6.png"),
+  loadImage("assets/test-1/parallax-1/image 8.png"),
+  loadImage("assets/test-1/parallax-1/image 9.png"),
+  loadImage("assets/test-1/parallax-1/image 10.png"),
+];
+const obstacleImages = [
+  loadImage("assets/test-1/obstacles/image 12.png"),
+  loadImage("assets/test-1/obstacles/image 13.png"),
+];
 const characterImage = loadImage("assets/test-1/character/character.png");
 const backgroundImage = new Image();
 backgroundImage.src = "assets/test-1/background.png";
@@ -43,7 +59,7 @@ function resize() {
   player.duckHeight = player.height * 0.55;
   player.y = groundY - getPlayerHeight();
   fillParallax3();
-  fillLayer(backgroundNear, 12, groundY * 0.72, 0.45);
+  fillParallax2();
   fillForeground();
 }
 
@@ -82,6 +98,7 @@ function fillForeground() {
       height,
       bottomY,
       speedRatio: 1.25,
+      imageIndex: randomParallax1ImageIndex(),
     });
   }
 }
@@ -102,8 +119,31 @@ function fillParallax3() {
   }
 }
 
+function fillParallax2() {
+  backgroundNear.length = 0;
+  const count = 6;
+  for (let index = 0; index < count; index += 1) {
+    backgroundNear.push({
+      x: (canvas.width / count) * index,
+      y: 0,
+      width: canvas.width * (0.18 + Math.random() * 0.1),
+      bottomY: groundY * 0.76,
+      speedRatio: 0.45,
+      imageIndex: randomParallax2ImageIndex(),
+    });
+  }
+}
+
 function randomParallax3ImageIndex() {
   return Math.floor(Math.random() * parallax3Images.length);
+}
+
+function randomParallax2ImageIndex() {
+  return Math.floor(Math.random() * parallax2Images.length);
+}
+
+function randomParallax1ImageIndex() {
+  return Math.floor(Math.random() * parallax1Images.length);
 }
 
 function getBaseSpeed() {
@@ -148,6 +188,7 @@ function spawnObstacle() {
       y: groundY - height,
       width: player.width * 0.55,
       height,
+      imageIndex: 0,
     });
   } else if (type === 1) {
     const height = player.height * 0.28;
@@ -156,6 +197,7 @@ function spawnObstacle() {
       y: groundY - height,
       width: player.width * 1.25,
       height,
+      imageIndex: 1,
     });
   } else {
     const height = player.height * 0.22;
@@ -210,10 +252,14 @@ function moveLayer(layer, dt) {
       if (layer === backgroundFar) {
         box.width = canvas.width * (0.18 + Math.random() * 0.12);
         box.imageIndex = randomParallax3ImageIndex();
+      } else if (layer === backgroundNear) {
+        box.width = canvas.width * (0.18 + Math.random() * 0.1);
+        box.imageIndex = randomParallax2ImageIndex();
       } else if (layer === foreground) {
         box.width = canvas.width * (0.18 + Math.random() * 0.1);
         box.height = canvas.height * (0.08 + Math.random() * 0.06);
         box.y = box.bottomY - box.height;
+        box.imageIndex = randomParallax1ImageIndex();
       }
     }
   }
@@ -244,19 +290,16 @@ function draw() {
   drawBackgroundImage();
 
   drawParallax3();
-  drawLayer(backgroundNear, "#bbbbbb");
+  drawParallax2();
 
   ctx.fillStyle = "#111111";
   ctx.fillRect(0, groundY, canvas.width, canvas.height * 0.008);
 
   drawCharacter();
 
-  ctx.fillStyle = "#444444";
-  for (const obstacle of obstacles) {
-    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
-  }
+  drawObstacles();
 
-  drawLayer(foreground, "#777777");
+  drawParallax1();
 
   if (gameOver) {
     ctx.fillStyle = "rgba(0, 0, 0, 0.15)";
@@ -301,9 +344,41 @@ function drawCharacter() {
   ctx.drawImage(characterImage, playerBox.x, playerBox.y, playerBox.width, playerBox.height);
 }
 
+function drawObstacles() {
+  ctx.fillStyle = "#444444";
+  for (const obstacle of obstacles) {
+    const image = obstacleImages[obstacle.imageIndex];
+    if (!image || !image.complete || image.naturalWidth === 0) {
+      ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+      continue;
+    }
+    ctx.drawImage(image, obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+  }
+}
+
 function drawParallax3() {
   for (const box of backgroundFar) {
     const image = parallax3Images[box.imageIndex];
+    if (!image.complete || image.naturalWidth === 0) continue;
+    const height = box.width * (image.naturalHeight / image.naturalWidth);
+    box.y = box.bottomY - height;
+    ctx.drawImage(image, box.x, box.y, box.width, height);
+  }
+}
+
+function drawParallax2() {
+  for (const box of backgroundNear) {
+    const image = parallax2Images[box.imageIndex];
+    if (!image.complete || image.naturalWidth === 0) continue;
+    const height = box.width * (image.naturalHeight / image.naturalWidth);
+    box.y = box.bottomY - height;
+    ctx.drawImage(image, box.x, box.y, box.width, height);
+  }
+}
+
+function drawParallax1() {
+  for (const box of foreground) {
+    const image = parallax1Images[box.imageIndex];
     if (!image.complete || image.naturalWidth === 0) continue;
     const height = box.width * (image.naturalHeight / image.naturalWidth);
     box.y = box.bottomY - height;
